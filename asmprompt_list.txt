@@ -1,6 +1,6 @@
 ca65 V2.19 - Git d7d1d8969
-Main file   : asmprompt.asm
-Current file: asmprompt.asm
+Main file   : asmprompt_test.asm
+Current file: asmprompt_test.asm
 
 000000r 1               .org $080D
 00080D  1               .segment "STARTUP"
@@ -8,9 +8,9 @@ Current file: asmprompt.asm
 00080D  1               .segment "ONCE"
 00080D  1               .segment "CODE"
 00080D  1               
-00080D  1  4C 10 08        jmp first
+00080D  1  4C 21 08        jmp first
 000810  1               
-000810  1               ; zero page variables
+000810  1               ;zero page variables
 000810  1               ZP = $30
 000810  1               OT = $22
 000810  1               AR = $25
@@ -18,7 +18,7 @@ Current file: asmprompt.asm
 000810  1               YR = $27
 000810  1               SR = $28
 000810  1               
-000810  1               ; character variables
+000810  1               ;character variables
 000810  1               backspace = $14
 000810  1               escape = $1B
 000810  1               
@@ -36,476 +36,571 @@ Current file: asmprompt.asm
 000810  1                   php
 000810  1                   pla
 000810  1                   sta SR
+000810  1                   cld
 000810  1               .endmacro
 000810  1               
-000810  1               first:
-000810  1  A9 01            lda #1
-000812  1  85 22            sta OT
-000814  1  A9 58            lda #'x'
-000816  1  85 2A            sta $2A
-000818  1  A9 59            lda #'y'
-00081A  1  85 2B            sta $2B
-00081C  1  A9 50            lda #'p'
-00081E  1  85 2C            sta $2C
-000820  1  64 30            stz ZP
-000822  1  64 25            stz AR
-000824  1  64 26            stz XR
-000826  1  64 27            stz YR
-000828  1  64 28            stz SR
-00082A  1               start:
-00082A  1  64 23            stz $23             ;zero out the value for setting the nibble skip
-00082C  1  64 24            stz $24             ;zero out the value for nibble skip
-00082E  1  A9 0D            lda #$0D            ;enter
-000830  1  20 D2 FF         jsr CHROUT          ;new line
-000833  1  A2 00            ldx #0              ;zero out the index
-000835  1               input:
-000835  1  20 CF FF         jsr CHRIN           ;input from keyboard
-000838  1  C9 0D            cmp #$0D            ;check for enter
-00083A  1  D0 03            bne cont            ;not enter
-00083C  1  4C 27 09         jmp check           ;enter pressed, input has ended, time to check
-00083F  1               cont:
-00083F  1  C9 14            cmp #backspace      ;has backspace been inputed?
-000841  1  D0 05            bne next            ;no
-000843  1  E0 00            cpx #0
-000845  1  F0 EE            beq input           ;yes, but nothing had been written yet
-000847  1  CA               dex                 ;backspace, decrement the index
-000848  1               next:
-000848  1  C9 20            cmp #$20            ;is it a valid character?
-00084A  1  30 E9            bmi input           ;no, go back
-00084C  1  C9 5B            cmp #'z'+1          ;is it a letter, symbol or a number?
-00084E  1  10 E5            bpl input           ;no, go back
-000850  1  95 30            sta ZP,x            ;store the character
-000852  1  E8               inx                 ;increment the index
-000853  1  80 E0            bra input           ;check for more characters
-000855  1               incy:                   ;some functions are here because 65(c)02 is able to branch backwards
-000855  1  C9 59            cmp #'y'
-000857  1  D0 4E            bne err3            ;see later code comments to figure out how this code works it's simular
-000859  1  A5 28 48 28      lds
-00085D  1  A4 27            ldy YR
-00085F  1  C8               iny
-000860  1  84 27            sty YR
-000862  1  08 68 85 28      sts
-000866  1  4C 15 0B         jmp gentext
-000869  1               as:
-000869  1  C9 4C            cmp #'l'
-00086B  1  D0 3A            bne err3
-00086D  1  A5 28 48 28      lds
-000871  1  A5 25            lda AR
-000873  1  0A               asl
-000874  1  85 25            sta AR
-000876  1  08 68 85 28      sts
-00087A  1  4C 15 0B         jmp gentext
-00087D  1               inca:
-00087D  1  C9 43            cmp #'c'
-00087F  1  D0 D4            bne incy
-000881  1  A5 28 48 28      lds
-000885  1  A5 25            lda AR
-000887  1  1A               inc
-000888  1  85 25            sta AR
-00088A  1  08 68 85 28      sts
-00088E  1  4C 15 0B         jmp gentext
-000891  1               ty:
-000891  1  C9 41            cmp #'a'
-000893  1  D0 12            bne err3
-000895  1  A5 27            lda YR
-000897  1  85 25            sta AR
-000899  1  4C 15 0B         jmp gentext
-00089C  1               tx:
-00089C  1  C9 41            cmp #'a'
-00089E  1  D0 07            bne err3
-0008A0  1  A5 26            lda XR
-0008A2  1  85 25            sta AR
-0008A4  1  4C 15 0B         jmp gentext
-0008A7  1               err3:
-0008A7  1  4C BC 0A         jmp err         ;jump to error handler
-0008AA  1               taty:
-0008AA  1  C9 59            cmp #'y'
-0008AC  1  D0 F9            bne err3
-0008AE  1  A5 25            lda AR
-0008B0  1  85 27            sta YR
-0008B2  1  4C 15 0B         jmp gentext
-0008B5  1               ta:
-0008B5  1  C9 58            cmp #'x'
-0008B7  1  D0 F1            bne taty
-0008B9  1  A5 25            lda AR
-0008BB  1  85 26            sta XR
-0008BD  1  4C 15 0B         jmp gentext
-0008C0  1               ad:
-0008C0  1  C9 43            cmp #'c'
-0008C2  1  D0 E3            bne err3
-0008C4  1  A2 6D            ldx #$6d
-0008C6  1  A0 69            ldy #$69
-0008C8  1  4C 5B 0A         jmp load
-0008CB  1               an:
-0008CB  1  C0 44            cpy #'d'
-0008CD  1  F0 F1            beq ad
-0008CF  1  C0 53            cpy #'s'
-0008D1  1  F0 96            beq as
-0008D3  1  C0 4E            cpy #'n'
-0008D5  1  D0 D0            bne err3
-0008D7  1  C9 44            cmp #'d'
-0008D9  1  D0 CC            bne err3
-0008DB  1  A2 2D            ldx #$2D
-0008DD  1  A0 29            ldy #$29
-0008DF  1  4C 5B 0A         jmp load
-0008E2  1               i:
-0008E2  1  C0 4E            cpy #'n'
-0008E4  1  D0 C1            bne err3
-0008E6  1  C9 58            cmp #'x'
-0008E8  1  D0 93            bne inca
-0008EA  1  A5 28 48 28      lds
-0008EE  1  A6 26            ldx XR
-0008F0  1  E8               inx
-0008F1  1  86 26            stx XR
-0008F3  1  08 68 85 28      sts
-0008F7  1  4C 15 0B         jmp gentext
-0008FA  1               t:
-0008FA  1  C0 41            cpy #'a'
-0008FC  1  F0 B7            beq ta
-0008FE  1  C0 58            cpy #'x'
-000900  1  F0 9A            beq tx
-000902  1  C0 59            cpy #'y'
-000904  1  F0 8B            beq ty
-000906  1  4C BC 0A         jmp err
-000909  1               e:
-000909  1  C0 4F            cpy #'o'
-00090B  1  D0 9A            bne err3
-00090D  1  C9 52            cmp #'r'
-00090F  1  D0 96            bne err3
-000911  1  A2 4D            ldx #$4D
-000913  1  A0 49            ldy #$49
-000915  1  4C 5B 0A         jmp load
-000918  1               o:
-000918  1  C0 52            cpy #'r'
-00091A  1  D0 8B            bne err3
-00091C  1  C9 41            cmp #'a'
-00091E  1  D0 87            bne err3
-000920  1  A2 0D            ldx #$0D
-000922  1  A0 09            ldy #$09
-000924  1  4C 5B 0A         jmp load
-000927  1               check:              ;what has been stored in memory?
-000927  1  74 30            stz ZP,x        ;terminate the string
-000929  1  A6 30            ldx ZP
-00092B  1  A4 31            ldy ZP+1        ;load three first symbols into registers (1-x, 2-y, 3-a)
-00092D  1  A5 32            lda ZP+2        ;every implimented instruction consists of three letters
-00092F  1  E0 4D            cpx #'m'
-000931  1  F0 2D            beq tog_out
-000933  1  E0 4F            cpx #'o'        ;check for first letter
-000935  1  F0 E1            beq o
-000937  1  E0 45            cpx #'e'
-000939  1  F0 CE            beq e
-00093B  1  E0 49            cpx #'i'
-00093D  1  F0 A3            beq i
-00093F  1  E0 4C            cpx #'l'
-000941  1  F0 55            beq l
-000943  1  E0 4A            cpx #'j'
-000945  1  F0 60            beq j
-000947  1  E0 41            cpx #'a'
-000949  1  F0 80            beq an
-00094B  1  E0 53            cpx #'s'
-00094D  1  F0 6A            beq s
-00094F  1  E0 43            cpx #'c'
-000951  1  F0 1C            beq c
-000953  1  E0 52            cpx #'r'
-000955  1  F0 29            beq r
-000957  1  E0 54            cpx #'t'
-000959  1  F0 9F            beq t
-00095B  1  E0 51            cpx #'q'
-00095D  1  D0 57            bne err2        ;invalid symbol, give an error
-00095F  1  60               rts             ;q has been written, quit the program
-000960  1               tog_out:
-000960  1  A5 22            lda OT
-000962  1  49 01            eor #1
-000964  1  85 22            sta OT
-000966  1  18               clc
-000967  1  69 30            adc #$30
-000969  1  20 D2 FF         jsr CHROUT
-00096C  1  4C 2A 08         jmp start
-00096F  1               c:                  ;c is the first letter, check if "clc" instruction has been written
-00096F  1  C0 4C            cpy #'l'
-000971  1  D0 43            bne err2        ;error out
-000973  1  C9 43            cmp #'c'
-000975  1  D0 3F            bne err2
-000977  1  A5 28            lda SR          ;load the status register
-000979  1  29 FE            and #%11111110  ;and mask to clear the carry flag (last bit) and leave other flags unchanged
-00097B  1  85 28            sta SR          ;store the modified status register
-00097D  1  4C 15 0B         jmp gentext       ;go back to input
-000980  1               r:
-000980  1  C0 4F            cpy #'o'        ;r is the first letter, check for "ror" and "rol" instructions
-000982  1  D0 32            bne err2        ;only implied address mode implemented rn
-000984  1  C9 52            cmp #'r'
-000986  1  D0 6C            bne rotl        ;branch when this is not "ror", check for "rol"
-000988  1  A5 28 48 28      lds             ;load and apply status register (this is a macro)
-00098C  1  A5 25            lda AR          ;load A register
-00098E  1  6A               ror             ;rotate A register right
-00098F  1  85 25            sta AR          ;store A register for other instructions
-000991  1  08 68 85 28      sts             ;store the status register (also a macro)
-000995  1  4C 15 0B         jmp gentext       ;go back for input
-000998  1               l:
-000998  1  C0 44            cpy #'d'        ;l is the first letter, check for "lda", "ldx", "ldy" and "lsr" instructions
-00099A  1  D0 7E            bne ls          ;branch when is "lsr" or invalid
-00099C  1  C9 41            cmp #'a'
-00099E  1  D0 68            bne loadx       ;branch when not "lda"
-0009A0  1  A0 A9            ldy #$A9        ;load the immediate address mode opcode for "lda" to Y
-0009A2  1  A2 AD            ldx #$AD        ;load the absolute address mode opcode for "lda" to X
-0009A4  1  4C 5B 0A         jmp load        ;jump to assembler
-0009A7  1               j:
-0009A7  1  C0 53            cpy #'s'        ;j is the first letter, check for "jsr" instruction
-0009A9  1  D0 0B            bne err2
-0009AB  1  C9 52            cmp #'r'
-0009AD  1  D0 07            bne err2
-0009AF  1  A2 20            ldx #$20        ;load "jsr" opcode to X
-0009B1  1  A0 00            ldy #0          ;no immediate opcodes for "jsr", 0 is the magic value for that
-0009B3  1  4C 5B 0A         jmp load        ;jump to assembler
-0009B6  1               err2:
-0009B6  1  4C BC 0A         jmp err         ;jump to error handler
-0009B9  1               s:                  ;s is the first letter, check for "sec", "sbc", "sta", "stx" and "sty" instructions
-0009B9  1  C0 45            cpy #'e'
-0009BB  1  F0 2A            beq se          ;branch when its "se*"
-0009BD  1  C0 42            cpy #'b'
-0009BF  1  F0 1B            beq sb          ;branch when its "sb*"
-0009C1  1  C0 54            cpy #'t'
-0009C3  1  D0 F1            bne err2        ;not branch when its "st*"
-0009C5  1  C9 58            cmp #'x'
-0009C7  1  F0 4A            beq storx       ;branch when its "stx"
-0009C9  1  C9 59            cmp #'y'
-0009CB  1  F0 65            beq story       ;branch when its "sty"
-0009CD  1  C9 5A            cmp #'z'
-0009CF  1  F0 68            beq st0         ;branch when its "stz"
-0009D1  1  C9 41            cmp #'a'
-0009D3  1  D0 E1            bne err2        ;not branch when its "sta"
-0009D5  1  A2 8D            ldx #$8D        ;load absolute opcode
-0009D7  1  A0 00            ldy #0          ;load magic value
-0009D9  1  4C 5B 0A         jmp load        ;jump to assembler
-0009DC  1               sb:
-0009DC  1  C9 43            cmp #'c'
-0009DE  1  D0 D6            bne err2        ;not branch when its "sbc"
-0009E0  1  A2 ED            ldx #$ED        ;load absolute opcode
-0009E2  1  A0 E9            ldy #$E9        ;load immediate opcode
-0009E4  1  4C 5B 0A         jmp load        ;jump to assembler
-0009E7  1               se:
-0009E7  1  C9 43            cmp #'c'
-0009E9  1  D0 CB            bne err2        ;not branch when its "sec"
-0009EB  1  A5 28            lda $28         ;load status register
-0009ED  1  09 01            ora #$1         ;set last bit to 1 or leave last bit at 1, bits in this register are mapped like NV--DIZC
-0009EF  1  85 28            sta $28         ;store status register
-0009F1  1  4C 15 0B         jmp gentext       ;return for next input
-0009F4  1               rotl:               ;implied mode only for now
-0009F4  1  C9 4C            cmp #'l'
-0009F6  1  D0 BE            bne err2        ;not branch when its "rol"
-0009F8  1  A5 28 48 28      lds             ;load and apply status register
-0009FC  1  A5 25            lda AR          ;load A register
-0009FE  1  2A               rol             ;rotate left
-0009FF  1  85 25            sta AR          ;store A register
-000A01  1  08 68 85 28      sts             ;store potentially modified status register
-000A05  1  4C 15 0B         jmp gentext       ;return for next input
-000A08  1               loadx:
-000A08  1  C9 58            cmp #'x'
-000A0A  1  D0 34            bne loady       ;not branch when its "ldx"
-000A0C  1  A0 A2            ldy #$A2        ;load immediate and absolute opcodes
-000A0E  1  A2 AE            ldx #$AE
-000A10  1  4C 5B 0A         jmp load        ;jump to assembler
-000A13  1               storx:
-000A13  1  A2 8E            ldx #$8E        ;load absolute opcode and magic number
-000A15  1  A0 00            ldy #0
-000A17  1  4C 5B 0A         jmp load        ;jump to assembler
-000A1A  1               ls:
-000A1A  1  C0 53            cpy #'s'
-000A1C  1  D0 98            bne err2
-000A1E  1  C9 52            cmp #'r'
-000A20  1  D0 94            bne err2        ;not branch when its "lsr"
-000A22  1  A5 28 48 28      lds             ;load and apply the status register
-000A26  1  A5 25            lda AR          ;load A register
-000A28  1  4A               lsr             ;bit shift to the left
-000A29  1  85 25            sta AR          ;store A register
-000A2B  1  08 68 85 28      sts             ;store potentially changed status register
-000A2F  1  4C 15 0B         jmp gentext       ;jump to assembler
-000A32  1               story:
-000A32  1  A2 8C            ldx #$8C        ;load absolute opcode and magic number
-000A34  1  A0 00            ldy #0
-000A36  1  4C 5B 0A         jmp load        ;jump to assembler
-000A39  1               st0:
-000A39  1  A2 9C            ldx #$9C        ;load absolute opcode and magic number
-000A3B  1  A0 00            ldy #0
-000A3D  1  4C 5B 0A         jmp load        ;jump to assembler
-000A40  1               loady:
-000A40  1  C9 59            cmp #'y'
-000A42  1  D0 78            bne err         ;not branch when its "ldy"
-000A44  1  A0 A0            ldy #$A0        ;load immediate and absolute opcodes
-000A46  1  A2 AC            ldx #$AC
-000A48  1  4C 5B 0A         jmp load        ;jump to assembler
-000A4B  1               andr:
-000A4B  1  C9 24            cmp #$24
-000A4D  1  D0 6D            bne err         ;not branch when the "$" is detected
-000A4F  1  86 30            stx ZP          ;store absolute opcode to 1st byte of the code
-000A51  1  A2 02            ldx #2          ;load the offset for reading the arguments for reading the last 2 nibbles of the argument
-000A53  1  A0 00            ldy #0          ;load the offset for writing the binary code
-000A55  1  80 20            bra ldmath      ;branch to decoding the text
-000A57  1               cng:
-000A57  1  85 24            sta $24         ;might not need to branch but whatever
-000A59  1  80 1C            bra ldmath      ;go back to main code
-000A5B  1               load:               ;building instruction (or code) with arguments, x = absolute opcode, y = immediate opcode
-000A5B  1  A5 33            lda ZP+3        ;check for the space after the instruction input
-000A5D  1  C9 20            cmp #$20
-000A5F  1  D0 5B            bne err
-000A61  1  A5 34            lda ZP+4        ;check for first symbol of the argument
-000A63  1  C9 23            cmp #$23
-000A65  1  D0 E4            bne andr        ;not "#" detected, its not immediate address mode
-000A67  1  C0 00            cpy #0          ;check for the magic number
-000A69  1  F0 51            beq err         ;magic number detected, that means that there's no immediate address mode for the instruction.
-000A6B  1  84 30            sty ZP          ;store immediate opcode to 1st byte of the code
-000A6D  1  A0 00            ldy #0          ;load the offset for writing the binary code
-000A6F  1               here:               ;dis is skipped for the first time running the code for absolute address mode
-000A6F  1  A2 00            ldx #0          ;load the offset for reading the arguments, read the first 2 nibbles of the argument
-000A71  1  A5 23            lda $23         ;load the value for checking for nibble skip
-000A73  1  C9 01            cmp #1
-000A75  1  F0 E0            beq cng         ;value is 1, branch to change the value for nibble skip to 1
-000A77  1               ldmath:
-000A77  1  B5 35            lda ZP+5,x      ;load the 1st+x nibble
-000A79  1  C9 30            cmp #$30        ;check for "0"
-000A7B  1  30 3F            bmi err         ;error out when its less than a number PETSCII code
-000A7D  1  C9 3A            cmp #$3A        ;check for "9"+1
-000A7F  1  30 08            bmi dek         ;branch to decimal decoding when it's a number PETSCII code
-000A81  1  20 03 0B         jsr hex         ;jsr to hex decoding subroutine
-000A84  1  99 31 00         sta ZP+1,y      ;hex subroutine ended, store decoded value at 2nd or 3rd byte of code
-000A87  1  80 06            bra dig2        ;skip to decoding 2nd+x nibble
-000A89  1               dek:
-000A89  1  38               sec
-000A8A  1  E9 30            sbc #$30        ;35('5')-30=5
-000A8C  1  99 31 00         sta ZP+1,y      ;store decoded value at 2nd or 3rd byte of code
-000A8F  1               dig2:
-000A8F  1  A5 24            lda $24         ;load the nibble skip value
-000A91  1  C9 01            cmp #1
-000A93  1  F0 4A            beq ender       ;skip to end if nibble skip is set
-000A95  1  B5 36            lda ZP+6,x      ;load the 2nd+x nibble
-000A97  1  C9 00            cmp #0          ;check for null terminator
-000A99  1  F0 36            beq ender2      ;only 1 or 3 nibbles are entered but that's fine. skip to the handler of that
-000A9B  1  30 1F            bmi err
-000A9D  1  C9 3A            cmp #$3A        ;the same as previous time
-000A9F  1  30 28            bmi dek2        ;copy of previous decoder, just it stores decoded bytes ad 3rd or 4th byte at the end it branches to merger
-000AA1  1  20 03 0B         jsr hex         ;jsr to hex decoder
-000AA4  1  99 32 00         sta ZP+2,y      ;store hex subroutine ended, store decoded value at 3rd or 4th byte of code
-000AA7  1               merger:
-000AA7  1  B9 31 00         lda ZP+1,y      ;load 2nd or 3rd byte of the code
-000AAA  1  0A               asl             ;shift the lower nibble to the upper nibble spot
-000AAB  1  0A               asl
-000AAC  1  0A               asl
-000AAD  1  0A               asl
-000AAE  1  18               clc
-000AAF  1  79 32 00         adc ZP+2,y      ;add this and 3rd or 4th byte of the code
-000AB2  1  99 31 00         sta ZP+1,y      ;store the new 2nd or 3rd byte of the code
-000AB5  1  C8               iny             ;increment Y to increment where to store bytes
-000AB6  1  E0 01            cpx #1          ;check for the read offset of 1 (set by ender2 branch) or 2
-000AB8  1  10 B5            bpl here        ;if it's that then loop to the start of the assembler
-000ABA  1  80 23            bra ender       ;skip some code and go to the end
-000ABC  1               err:                ;error handler
-000ABC  1  A9 0D            lda #$0D
-000ABE  1  20 D2 FF         jsr CHROUT
-000AC1  1  A9 45            lda #'e'
-000AC3  1  20 D2 FF         jsr CHROUT      ;output enter and 'e'
-000AC6  1  4C 2A 08         jmp start       ;jump to gentext
-000AC9  1               dek2:
-000AC9  1  38               sec
-000ACA  1  E9 30            sbc #$30
-000ACC  1  99 32 00         sta ZP+2,y
-000ACF  1  80 D6            bra merger
-000AD1  1               ender2:
-000AD1  1  A5 34            lda ZP+4        ;check for the first symbol of the argument again
-000AD3  1  C9 24            cmp #$24
-000AD5  1  D0 08            bne ender       ;its '#', the program can skip to the end
-000AD7  1  A2 01            ldx #1          ;load read offset of 1
-000AD9  1  A0 00            ldy #0          ;load write offset of 0
-000ADB  1  86 23            stx $23         ;set the value for setting the nibble skip
-000ADD  1  80 98            bra ldmath      ;do the assemble routine again with these values
-000ADF  1               ender:
-000ADF  1  A5 34            lda ZP+4
-000AE1  1  C9 24            cmp #$24        ;check for the first symbol of the argument again
-000AE3  1  F0 2A            beq alt         ;branch to alternative if its "$"
-000AE5  1  A9 60            lda #$60
-000AE7  1  85 32            sta ZP+2        ;store "rts" opcode to last (3rd) byte of the code
-000AE9  1               ret:
-000AE9  1  A6 26            ldx XR
-000AEB  1  A4 27            ldy YR
-000AED  1  A5 28 48 28      lds
-000AF1  1  A5 25            lda AR          ;load A, X, Y registers and a status register
-000AF3  1  20 30 00         jsr ZP          ;jsr to the code that the assembler has built
-000AF6  1  85 25            sta AR
-000AF8  1  86 26            stx XR
-000AFA  1  84 27            sty YR
-000AFC  1  08 68 85 28      sts             ;store the registers
-000B00  1  4C 15 0B         jmp gentext     ;jump to the text generator
-000B03  1               hex:                ;hex decoder
-000B03  1  C9 41            cmp #$41
-000B05  1  30 B5            bmi err         ;branch if input is less than PETSCII "A"
-000B07  1  C9 47            cmp #$47
-000B09  1  10 B1            bpl err         ;branch if input is more than PETSCII "F"
-000B0B  1  38               sec
-000B0C  1  E9 37            sbc #$37        ;$42-$37=$0B
-000B0E  1  60               rts             ;return to writing bytes
-000B0F  1               alt:
-000B0F  1  A9 60            lda #$60
-000B11  1  85 33            sta ZP+3        ;store "rts" opcode to 4th byte of the code
-000B13  1  80 D4            bra ret         ;go back to the main program
-000B15  1               gentext:
-000B15  1  A5 22            lda OT
-000B17  1  F0 61            beq start2
-000B19  1  A9 0D            lda #$0D
-000B1B  1  20 D2 FF         jsr CHROUT
-000B1E  1  A9 41            lda #'a'
-000B20  1  A2 00            ldx #0
-000B22  1  A0 00            ldy #0
-000B24  1               loop2:
-000B24  1  9D 00 04         sta $0400,x
-000B27  1  A9 3D            lda #'='
-000B29  1  9D 01 04         sta $0401,x
-000B2C  1  B9 25 00         lda AR,y
-000B2F  1  4A               lsr
-000B30  1  4A               lsr
-000B31  1  4A               lsr
-000B32  1  4A               lsr
-000B33  1  C9 0A            cmp #$0A
-000B35  1  10 2C            bpl hex3
-000B37  1  18               clc
-000B38  1  69 30            adc #$30
-000B3A  1               ret3:
-000B3A  1  9D 02 04         sta $0402,x
-000B3D  1  B9 25 00         lda AR,y
-000B40  1  29 0F            and #$0F
-000B42  1  C9 0A            cmp #$0A
-000B44  1  10 22            bpl hex4
-000B46  1  18               clc
-000B47  1  69 30            adc #$30
-000B49  1               ret4:
-000B49  1  9D 03 04         sta $0403,x
-000B4C  1  A9 20            lda #$20
-000B4E  1  9D 04 04         sta $0404,x
-000B51  1  9E 05 04         stz $0405,x
-000B54  1  C0 03            cpy #3
-000B56  1  F0 15            beq outtextp
-000B58  1  8A               txa
-000B59  1  18               clc
-000B5A  1  69 05            adc #$5
-000B5C  1  AA               tax
-000B5D  1  B9 2A 00         lda $2A,y
-000B60  1  C8               iny
-000B61  1  80 C1            bra loop2
-000B63  1               hex3:
-000B63  1  18               clc
-000B64  1  69 37            adc #$37
-000B66  1  80 D2            bra ret3
-000B68  1               hex4:
-000B68  1  18               clc
-000B69  1  69 37            adc #$37
-000B6B  1  80 DC            bra ret4
-000B6D  1               outtextp:
-000B6D  1  A2 00            ldx #$0
-000B6F  1               ;   jmp outtext
-000B6F  1               outtext:        ;outputs text data at $0400+x
-000B6F  1  BD 00 04         lda $0400,x
-000B72  1  F0 06            beq start2
-000B74  1  20 D2 FF         jsr CHROUT
-000B77  1  E8               inx
-000B78  1  80 F5            bra outtext
-000B7A  1               start2:
-000B7A  1  4C 2A 08         jmp start
-000B7A  1               
+000810  1               andmasks:
+000810  1  80 40 20 10  .byte $80,$40,$20,$10,$08,$04,$02,$01
+000814  1  08 04 02 01  
+000818  1               
+000818  1               status:
+000818  1  4E 56 2D 2D  .asciiz "nv--dizc"
+00081C  1  44 49 5A 43  
+000820  1  00           
+000821  1               
+000821  1               first:
+000821  1  A9 01            lda #1
+000823  1  85 22            sta OT
+000825  1  A9 58            lda #'x'
+000827  1  85 2A            sta $2A
+000829  1  A9 59            lda #'y'
+00082B  1  85 2B            sta $2B
+00082D  1  A9 50            lda #'p'
+00082F  1  85 2C            sta $2C
+000831  1  64 30            stz ZP
+000833  1  64 25            stz AR
+000835  1  64 26            stz XR
+000837  1  64 27            stz YR
+000839  1  64 28            stz SR
+00083B  1               start:
+00083B  1  64 23            stz $23             ;zero out the value for setting the nibble skip
+00083D  1  64 24            stz $24             ;zero out the value for nibble skip
+00083F  1  A9 0D            lda #$0D            ;enter
+000841  1  20 D2 FF         jsr CHROUT          ;new line
+000844  1  A2 00            ldx #0              ;zero out the index
+000846  1               input:
+000846  1  20 CF FF         jsr CHRIN           ;input from keyboard
+000849  1  C9 0D            cmp #$0D            ;check for enter
+00084B  1  D0 03            bne cont            ;not enter
+00084D  1  4C 3C 09         jmp check           ;enter pressed, input has ended, time to check
+000850  1               cont:
+000850  1  C9 14            cmp #backspace      ;has backspace been inputed?
+000852  1  D0 05            bne next            ;no
+000854  1  E0 00            cpx #0
+000856  1  F0 EE            beq input           ;yes, but nothing had been written yet
+000858  1  CA               dex                 ;backspace, decrement the index
+000859  1               next:
+000859  1  C9 20            cmp #$20            ;is it a valid character?
+00085B  1  30 E9            bmi input           ;no, go back
+00085D  1  C9 5B            cmp #'z'+1          ;is it a letter, symbol or a number?
+00085F  1  10 E5            bpl input           ;no, go back
+000861  1  95 30            sta ZP,x            ;store the character
+000863  1  E8               inx                 ;increment the index
+000864  1  80 E0            bra input           ;check for more characters
+000866  1               incy:                   ;some functions are here because 65(c)02 is able to branch backwards
+000866  1  C9 59            cmp #'y'
+000868  1  D0 51            bne err3            ;see later code comments to figure out how this code works it's simular to that
+00086A  1  A5 28 48 28      lds
+00086E  1  A4 27            ldy YR
+000870  1  C8               iny
+000871  1  84 27            sty YR
+000873  1  08 68 85 28      sts
+000877  1  D8           
+000878  1  4C 53 0B         jmp gentext
+00087B  1               as:
+00087B  1  C9 4C            cmp #'l'
+00087D  1  D0 3C            bne err3
+00087F  1  A5 28 48 28      lds
+000883  1  A5 25            lda AR
+000885  1  0A               asl
+000886  1  85 25            sta AR
+000888  1  08 68 85 28      sts
+00088C  1  D8           
+00088D  1  4C 53 0B         jmp gentext
+000890  1               inca:
+000890  1  C9 43            cmp #'c'
+000892  1  D0 D2            bne incy
+000894  1  A5 28 48 28      lds
+000898  1  A5 25            lda AR
+00089A  1  1A               inc
+00089B  1  85 25            sta AR
+00089D  1  08 68 85 28      sts
+0008A1  1  D8           
+0008A2  1  4C 53 0B         jmp gentext
+0008A5  1               ty:
+0008A5  1  C9 41            cmp #'a'
+0008A7  1  D0 12            bne err3
+0008A9  1  A5 27            lda YR
+0008AB  1  85 25            sta AR
+0008AD  1  4C 53 0B         jmp gentext
+0008B0  1               tx:
+0008B0  1  C9 41            cmp #'a'
+0008B2  1  D0 07            bne err3
+0008B4  1  A5 26            lda XR
+0008B6  1  85 25            sta AR
+0008B8  1  4C 53 0B         jmp gentext
+0008BB  1               err3:
+0008BB  1  4C C6 0A         jmp err         ;jump to error handler
+0008BE  1               taty:
+0008BE  1  C9 59            cmp #'y'
+0008C0  1  D0 F9            bne err3
+0008C2  1  A5 25            lda AR
+0008C4  1  85 27            sta YR
+0008C6  1  4C 53 0B         jmp gentext
+0008C9  1               ta:
+0008C9  1  C9 58            cmp #'x'
+0008CB  1  D0 F1            bne taty
+0008CD  1  A5 25            lda AR
+0008CF  1  85 26            sta XR
+0008D1  1  4C 53 0B         jmp gentext
+0008D4  1               ad:
+0008D4  1  C9 43            cmp #'c'
+0008D6  1  D0 E3            bne err3
+0008D8  1  A2 6D            ldx #$6d
+0008DA  1  A0 69            ldy #$69
+0008DC  1  4C 98 0A         jmp load
+0008DF  1               an:
+0008DF  1  C0 44            cpy #'d'
+0008E1  1  F0 F1            beq ad
+0008E3  1  C0 53            cpy #'s'
+0008E5  1  F0 94            beq as
+0008E7  1  C0 4E            cpy #'n'
+0008E9  1  D0 D0            bne err3
+0008EB  1  C9 44            cmp #'d'
+0008ED  1  D0 CC            bne err3
+0008EF  1  A2 2D            ldx #$2D
+0008F1  1  A0 29            ldy #$29
+0008F3  1  4C 98 0A         jmp load
+0008F6  1               i:
+0008F6  1  C0 4E            cpy #'n'
+0008F8  1  D0 C1            bne err3
+0008FA  1  C9 58            cmp #'x'
+0008FC  1  D0 92            bne inca
+0008FE  1  A5 28 48 28      lds
+000902  1  A6 26            ldx XR
+000904  1  E8               inx
+000905  1  86 26            stx XR
+000907  1  08 68 85 28      sts
+00090B  1  D8           
+00090C  1  4C 53 0B         jmp gentext
+00090F  1               t:
+00090F  1  C0 41            cpy #'a'
+000911  1  F0 B6            beq ta
+000913  1  C0 58            cpy #'x'
+000915  1  F0 99            beq tx
+000917  1  C0 59            cpy #'y'
+000919  1  F0 8A            beq ty
+00091B  1  4C C6 0A         jmp err
+00091E  1               e:
+00091E  1  C0 4F            cpy #'o'
+000920  1  D0 99            bne err3
+000922  1  C9 52            cmp #'r'
+000924  1  D0 95            bne err3
+000926  1  A2 4D            ldx #$4D
+000928  1  A0 49            ldy #$49
+00092A  1  4C 98 0A         jmp load
+00092D  1               o:
+00092D  1  C0 52            cpy #'r'
+00092F  1  D0 8A            bne err3
+000931  1  C9 41            cmp #'a'
+000933  1  D0 86            bne err3
+000935  1  A2 0D            ldx #$0D
+000937  1  A0 09            ldy #$09
+000939  1  4C 98 0A         jmp load
+00093C  1               check:              ;what has been stored in memory?
+00093C  1  74 30            stz ZP,x        ;terminate the string
+00093E  1  A6 30            ldx ZP
+000940  1  A4 31            ldy ZP+1        ;load three first symbols into registers (1-x, 2-y, 3-a)
+000942  1  A5 32            lda ZP+2        ;every implimented instruction consists of three letters
+000944  1  E0 4D            cpx #'m'
+000946  1  F0 31            beq tog_out
+000948  1  E0 41            cpx #'a'
+00094A  1  F0 93            beq an
+00094C  1  E0 4F            cpx #'o'        ;check for first letter
+00094E  1  F0 DD            beq o
+000950  1  E0 45            cpx #'e'
+000952  1  F0 CA            beq e
+000954  1  E0 49            cpx #'i'
+000956  1  F0 9E            beq i
+000958  1  E0 4C            cpx #'l'
+00095A  1  F0 5D            beq l
+00095C  1  E0 4A            cpx #'j'
+00095E  1  F0 68            beq j
+000960  1  E0 53            cpx #'s'
+000962  1  F0 76            beq s
+000964  1  E0 43            cpx #'c'
+000966  1  F0 27            beq c
+000968  1  E0 52            cpx #'r'
+00096A  1  F0 34            beq r
+00096C  1  E0 54            cpx #'t'
+00096E  1  F0 9F            beq t
+000970  1  E0 44            cpx #'d'
+000972  1  F0 14            beq d
+000974  1  E0 51            cpx #'q'
+000976  1  D0 5F            bne err2        ;invalid symbol, give an error
+000978  1  60               rts             ;q has been written, quit the program
+000979  1               tog_out:            ;toggle output of the registers
+000979  1  A5 22            lda OT
+00097B  1  49 01            eor #1          ;changes 1 to 0 and 0 to 1
+00097D  1  85 22            sta OT
+00097F  1  18               clc
+000980  1  69 30            adc #$30        ;makes ASCII '1' or '0'
+000982  1  20 D2 FF         jsr CHROUT      ;prints out the new status
+000985  1  4C 3B 08         jmp start
+000988  1               d:
+000988  1  C0 45            cpy #'e'
+00098A  1  D0 4B            bne err2
+00098C  1  4C E8 0B         jmp de
+00098F  1               c:                  ;c is the first letter, check if "clc" instruction has been written
+00098F  1  C0 4C            cpy #'l'
+000991  1  D0 44            bne err2        ;error out
+000993  1  C9 43            cmp #'c'
+000995  1  D0 66            bne cled
+000997  1  A5 28            lda SR          ;load the status register
+000999  1  29 FE            and #%11111110  ;and mask to clear the carry flag (last bit) and leave other flags unchanged
+00099B  1  85 28            sta SR          ;store the modified status register
+00099D  1  4C 53 0B         jmp gentext     ;go to print out register values
+0009A0  1               r:
+0009A0  1  C0 4F            cpy #'o'        ;r is the first letter, check for "ror" and "rol" instructions
+0009A2  1  D0 33            bne err2        ;only implied address mode implemented rn
+0009A4  1  C9 52            cmp #'r'
+0009A6  1  D0 62            bne rotl        ;branch when this is not "ror", check for "rol"
+0009A8  1  A5 28 48 28      lds             ;load and apply status register (this is a macro)
+0009AC  1  A5 25            lda AR          ;load A register
+0009AE  1  6A               ror             ;rotate A register right
+0009AF  1  85 25            sta AR          ;store A register for other instructions
+0009B1  1  08 68 85 28      sts             ;store the status register (also a macro)
+0009B5  1  D8           
+0009B6  1  4C 53 0B         jmp gentext     ;go to print out register values
+0009B9  1               l:
+0009B9  1  C0 44            cpy #'d'        ;l is the first letter, check for "lda", "ldx", "ldy" and "lsr" instructions
+0009BB  1  D0 78            bne ls          ;branch when is "lsr" or invalid
+0009BD  1  C9 41            cmp #'a'
+0009BF  1  D0 69            bne loadx       ;branch when not "lda"
+0009C1  1  A0 A9            ldy #$A9        ;load the immediate address mode opcode for "lda" to Y
+0009C3  1  A2 AD            ldx #$AD        ;load the absolute address mode opcode for "lda" to X
+0009C5  1  4C 98 0A         jmp load        ;jump to assembler
+0009C8  1               j:
+0009C8  1  C0 53            cpy #'s'        ;j is the first letter, check for "jsr" instruction
+0009CA  1  D0 0B            bne err2
+0009CC  1  C9 52            cmp #'r'
+0009CE  1  D0 07            bne err2
+0009D0  1  A2 20            ldx #$20        ;load "jsr" opcode to X
+0009D2  1  A0 00            ldy #0          ;no immediate opcodes for "jsr", 0 is the magic value for that
+0009D4  1  4C 98 0A         jmp load        ;jump to assembler
+0009D7  1               err2:
+0009D7  1  4C C6 0A         jmp err         ;jump to error handler
+0009DA  1               s:                  ;s is the first letter, check for "sec", "sbc", "sta", "stx" and "sty" instructions
+0009DA  1  C0 45            cpy #'e'
+0009DC  1  F0 70            beq se          ;branch when its "se*"
+0009DE  1  C0 42            cpy #'b'
+0009E0  1  F0 3D            beq sb          ;branch when its "sb*"
+0009E2  1  C0 54            cpy #'t'
+0009E4  1  D0 F1            bne err2        ;not branch when its "st*"
+0009E6  1  C9 58            cmp #'x'
+0009E8  1  F0 71            beq storx       ;branch when its "stx"
+0009EA  1  C9 59            cmp #'y'
+0009EC  1  F0 74            beq story       ;branch when its "sty"
+0009EE  1  C9 5A            cmp #'z'
+0009F0  1  F0 77            beq st0         ;branch when its "stz"
+0009F2  1  C9 41            cmp #'a'
+0009F4  1  D0 E1            bne err2        ;not branch when its "sta"
+0009F6  1  A2 8D            ldx #$8D        ;load absolute opcode
+0009F8  1  A0 00            ldy #0          ;load magic value
+0009FA  1  4C 98 0A         jmp load        ;jump to assembler
+0009FD  1               cled:
+0009FD  1  C9 44            cmp #'d'
+0009FF  1  D0 D6            bne err2
+000A01  1  A5 28            lda SR
+000A03  1  29 F7            and #%11110111
+000A05  1  85 28            sta SR
+000A07  1  4C 53 0B         jmp gentext
+000A0A  1               rotl:               ;implied mode only for now
+000A0A  1  C9 4C            cmp #'l'
+000A0C  1  D0 C9            bne err2        ;not branch when its "rol"
+000A0E  1  A5 28 48 28      lds             ;load and apply status register
+000A12  1  A5 25            lda AR          ;load A register
+000A14  1  2A               rol             ;rotate left
+000A15  1  85 25            sta AR          ;store A register
+000A17  1  08 68 85 28      sts             ;store potentially modified status register
+000A1B  1  D8           
+000A1C  1  4C 53 0B         jmp gentext     ;go to print out register values
+000A1F  1               sb:
+000A1F  1  C9 43            cmp #'c'
+000A21  1  D0 B4            bne err2        ;not branch when its "sbc"
+000A23  1  A2 ED            ldx #$ED        ;load absolute opcode
+000A25  1  A0 E9            ldy #$E9        ;load immediate opcode
+000A27  1  4C 98 0A         jmp load        ;jump to assembler
+000A2A  1               loadx:
+000A2A  1  C9 58            cmp #'x'
+000A2C  1  D0 4F            bne loady       ;not branch when its "ldx"
+000A2E  1  A0 A2            ldy #$A2        ;load immediate and absolute opcodes
+000A30  1  A2 AE            ldx #$AE
+000A32  1  4C 98 0A         jmp load        ;jump to assembler
+000A35  1               ls:
+000A35  1  C0 53            cpy #'s'
+000A37  1  D0 9E            bne err2
+000A39  1  C9 52            cmp #'r'
+000A3B  1  D0 9A            bne err2        ;not branch when its "lsr"
+000A3D  1  A5 28 48 28      lds             ;load and apply the status register
+000A41  1  A5 25            lda AR          ;load A register
+000A43  1  4A               lsr             ;bit shift to the left
+000A44  1  85 25            sta AR          ;store A register
+000A46  1  08 68 85 28      sts             ;store potentially changed status register
+000A4A  1  D8           
+000A4B  1  4C 53 0B         jmp gentext     ;go to print out register values
+000A4E  1               se:
+000A4E  1  C9 43            cmp #'c'
+000A50  1  D0 1E            bne setd        ;not branch when its "sec"
+000A52  1  A5 28            lda SR          ;load status register
+000A54  1  09 01            ora #$1         ;set last bit to 1 or leave last bit at 1, bits in this register are mapped like NV--DIZC
+000A56  1  85 28            sta SR          ;store status register
+000A58  1  4C 53 0B         jmp gentext     ;go to print out register values
+000A5B  1               storx:
+000A5B  1  A2 8E            ldx #$8E        ;load absolute opcode and magic number
+000A5D  1  A0 00            ldy #0
+000A5F  1  4C 98 0A         jmp load        ;jump to assembler
+000A62  1               story:
+000A62  1  A2 8C            ldx #$8C        ;load absolute opcode and magic number
+000A64  1  A0 00            ldy #0
+000A66  1  4C 98 0A         jmp load        ;jump to assembler
+000A69  1               st0:
+000A69  1  A2 9C            ldx #$9C        ;load absolute opcode and magic number
+000A6B  1  A0 00            ldy #0
+000A6D  1  4C 98 0A         jmp load        ;jump to assembler
+000A70  1               setd:
+000A70  1  C9 44            cmp #'d'
+000A72  1  D0 52            bne err
+000A74  1  A5 28            lda SR
+000A76  1  09 08            ora #%00001000
+000A78  1  85 28            sta SR
+000A7A  1  4C 53 0B         jmp gentext
+000A7D  1               loady:
+000A7D  1  C9 59            cmp #'y'
+000A7F  1  D0 45            bne err         ;not branch when its "ldy"
+000A81  1  A0 A0            ldy #$A0        ;load immediate and absolute opcodes
+000A83  1  A2 AC            ldx #$AC
+000A85  1  4C 98 0A         jmp load        ;jump to assembler
+000A88  1               andr:
+000A88  1  C9 24            cmp #$24
+000A8A  1  D0 3A            bne err         ;not branch when the "$" is detected
+000A8C  1  86 30            stx ZP          ;store absolute opcode to 1st byte of the code
+000A8E  1  A2 02            ldx #2          ;load the offset for reading the arguments for reading the last 2 nibbles of the argument
+000A90  1  A0 00            ldy #0          ;load the offset for writing the binary code
+000A92  1  80 20            bra ldmath      ;branch to decoding the text
+000A94  1               cng:
+000A94  1  85 24            sta $24         ;might not need to branch but whatever
+000A96  1  80 1C            bra ldmath      ;go back to main code
+000A98  1               load:               ;building instruction (or code) with arguments, x = absolute opcode, y = immediate opcode
+000A98  1  A5 33            lda ZP+3        ;check for the space after the instruction input
+000A9A  1  C9 20            cmp #$20
+000A9C  1  D0 28            bne err
+000A9E  1  A5 34            lda ZP+4        ;check for first symbol of the argument
+000AA0  1  C9 23            cmp #$23
+000AA2  1  D0 E4            bne andr        ;not "#" detected, its not immediate address mode
+000AA4  1  C0 00            cpy #0          ;check for the magic number
+000AA6  1  F0 1E            beq err         ;magic number detected, that means that there's no immediate address mode for the instruction.
+000AA8  1  84 30            sty ZP          ;store immediate opcode to 1st byte of the code
+000AAA  1  A0 00            ldy #0          ;load the offset for writing the binary code
+000AAC  1               here:               ;dis is skipped for the first time running the code for absolute address mode
+000AAC  1  A2 00            ldx #0          ;load the offset for reading the arguments, read the first 2 nibbles of the argument
+000AAE  1  A5 23            lda $23         ;load the value for checking for nibble skip
+000AB0  1  C9 01            cmp #1
+000AB2  1  F0 E0            beq cng         ;value is 1, branch to change the value for nibble skip to 1
+000AB4  1               ldmath:
+000AB4  1  B5 35            lda ZP+5,x      ;load the 1st+x nibble
+000AB6  1  C9 30            cmp #$30        ;check for "0"
+000AB8  1  30 0C            bmi err         ;error out when its less than a number PETSCII code
+000ABA  1  C9 3A            cmp #$3A        ;check for "9"+1
+000ABC  1  30 15            bmi dek         ;branch to decimal decoding when it's a number PETSCII code
+000ABE  1  20 41 0B         jsr hex         ;jsr to hex decoding subroutine
+000AC1  1  99 31 00         sta ZP+1,y      ;hex subroutine ended, store decoded value at 2nd or 3rd byte of code
+000AC4  1  80 13            bra dig2        ;skip to decoding 2nd+x nibble
+000AC6  1               err:                ;error handler
+000AC6  1  A9 0D            lda #$0D
+000AC8  1  20 D2 FF         jsr CHROUT
+000ACB  1  A9 45            lda #'e'
+000ACD  1  20 D2 FF         jsr CHROUT      ;output enter and 'e'
+000AD0  1  4C 3B 08         jmp start       ;jump to start
+000AD3  1               dek:
+000AD3  1  38               sec
+000AD4  1  E9 30            sbc #$30        ;35('5')-30=5
+000AD6  1  99 31 00         sta ZP+1,y      ;store decoded value at 2nd or 3rd byte of code
+000AD9  1               dig2:
+000AD9  1  A5 24            lda $24         ;load the nibble skip value
+000ADB  1  C9 01            cmp #1
+000ADD  1  F0 3D            beq ender       ;skip to end if nibble skip is set
+000ADF  1  B5 36            lda ZP+6,x      ;load the 2nd+x nibble
+000AE1  1  C9 00            cmp #0          ;check for null terminator
+000AE3  1  F0 29            beq ender2      ;only 1 or 3 nibbles are entered but that's fine. skip to the handler of that
+000AE5  1  30 DF            bmi err
+000AE7  1  C9 3A            cmp #$3A        ;the same as previous time
+000AE9  1  30 1B            bmi dek2        ;copy of previous decoder, just it stores decoded bytes ad 3rd or 4th byte at the end it branches to merger
+000AEB  1  20 41 0B         jsr hex         ;jsr to hex decoder
+000AEE  1  99 32 00         sta ZP+2,y      ;store hex subroutine ended, store decoded value at 3rd or 4th byte of code
+000AF1  1               merger:
+000AF1  1  B9 31 00         lda ZP+1,y      ;load 2nd or 3rd byte of the code
+000AF4  1  0A               asl             ;shift the lower nibble to the upper nibble spot
+000AF5  1  0A               asl
+000AF6  1  0A               asl
+000AF7  1  0A               asl
+000AF8  1  18               clc
+000AF9  1  79 32 00         adc ZP+2,y      ;add this and 3rd or 4th byte of the code
+000AFC  1  99 31 00         sta ZP+1,y      ;store the new 2nd or 3rd byte of the code
+000AFF  1  C8               iny             ;increment Y to increment where to store bytes
+000B00  1  E0 01            cpx #1          ;check for the read offset of 1 (set by ender2 branch) or 2
+000B02  1  10 A8            bpl here        ;if it's that then loop to the start of the assembler
+000B04  1  80 16            bra ender       ;skip some code and go to the end
+000B06  1               dek2:
+000B06  1  38               sec
+000B07  1  E9 30            sbc #$30
+000B09  1  99 32 00         sta ZP+2,y
+000B0C  1  80 E3            bra merger
+000B0E  1               ender2:
+000B0E  1  A5 34            lda ZP+4        ;check for the first symbol of the argument again
+000B10  1  C9 24            cmp #$24
+000B12  1  D0 08            bne ender       ;its '#', the program can skip to the end
+000B14  1  A2 01            ldx #1          ;load read offset of 1
+000B16  1  A0 00            ldy #0          ;load write offset of 0
+000B18  1  86 23            stx $23         ;set the value for setting the nibble skip
+000B1A  1  80 98            bra ldmath      ;do the assemble routine again with these values
+000B1C  1               ender:
+000B1C  1  A5 34            lda ZP+4
+000B1E  1  C9 24            cmp #$24        ;check for the first symbol of the argument again
+000B20  1  F0 2B            beq alt         ;branch to alternative if its "$"
+000B22  1  A9 60            lda #$60
+000B24  1  85 32            sta ZP+2        ;store "rts" opcode to last (3rd) byte of the code
+000B26  1               ret:
+000B26  1  A6 26            ldx XR
+000B28  1  A4 27            ldy YR
+000B2A  1  A5 28 48 28      lds
+000B2E  1  A5 25            lda AR          ;load A, X, Y registers and a status register
+000B30  1  20 30 00         jsr ZP          ;jsr to the code that the assembler has built
+000B33  1  85 25            sta AR
+000B35  1  86 26            stx XR
+000B37  1  84 27            sty YR
+000B39  1  08 68 85 28      sts             ;store the registers
+000B3D  1  D8           
+000B3E  1  4C 53 0B         jmp gentext     ;jump to the text generator
+000B41  1               hex:                ;hex decoder
+000B41  1  C9 41            cmp #$41
+000B43  1  30 63            bmi err4        ;branch if input is less than PETSCII "A"
+000B45  1  C9 47            cmp #$47
+000B47  1  10 5F            bpl err4        ;branch if input is more than PETSCII "F"
+000B49  1  38               sec
+000B4A  1  E9 37            sbc #$37        ;$42-$37=$0B
+000B4C  1  60               rts             ;return to writing bytes
+000B4D  1               alt:
+000B4D  1  A9 60            lda #$60
+000B4F  1  85 33            sta ZP+3        ;store "rts" opcode to 4th byte of the code
+000B51  1  80 D3            bra ret         ;go back to the main program
+000B53  1               gentext:
+000B53  1  A5 22            lda OT
+000B55  1  F0 54            beq start2
+000B57  1  A9 0D            lda #$0D
+000B59  1  20 D2 FF         jsr CHROUT
+000B5C  1  A9 41            lda #'a'
+000B5E  1  A2 00            ldx #0
+000B60  1  A0 00            ldy #0
+000B62  1               loop2:
+000B62  1  9D 00 04         sta $0400,x
+000B65  1  A9 3D            lda #'='
+000B67  1  9D 01 04         sta $0401,x
+000B6A  1  B9 29 00         lda $29,y
+000B6D  1  C9 50            cmp #'p'
+000B6F  1  F0 47            beq genstat
+000B71  1  B9 25 00         lda AR,y
+000B74  1  4A               lsr
+000B75  1  4A               lsr
+000B76  1  4A               lsr
+000B77  1  4A               lsr
+000B78  1  C9 0A            cmp #$0A
+000B7A  1  10 32            bpl hex3
+000B7C  1  18               clc
+000B7D  1  69 30            adc #$30
+000B7F  1               ret3:
+000B7F  1  9D 02 04         sta $0402,x
+000B82  1  B9 25 00         lda AR,y
+000B85  1  29 0F            and #$0F
+000B87  1  C9 0A            cmp #$0A
+000B89  1  10 28            bpl hex4
+000B8B  1  18               clc
+000B8C  1  69 30            adc #$30
+000B8E  1               ret4:
+000B8E  1  9D 03 04         sta $0403,x
+000B91  1  A9 20            lda #$20
+000B93  1  9D 04 04         sta $0404,x
+000B96  1  9E 05 04         stz $0405,x
+000B99  1  C0 03            cpy #3
+000B9B  1  F0 3E            beq outtextp
+000B9D  1  8A               txa
+000B9E  1  18               clc
+000B9F  1  69 05            adc #$5
+000BA1  1  AA               tax
+000BA2  1  B9 2A 00         lda $2A,y
+000BA5  1  C8               iny
+000BA6  1  80 BA            bra loop2
+000BA8  1               err4:
+000BA8  1  4C C6 0A         jmp err
+000BAB  1               start2:
+000BAB  1  4C 3B 08         jmp start
+000BAE  1               hex3:
+000BAE  1  18               clc
+000BAF  1  69 37            adc #$37
+000BB1  1  80 CC            bra ret3
+000BB3  1               hex4:
+000BB3  1  18               clc
+000BB4  1  69 37            adc #$37
+000BB6  1  80 D6            bra ret4
+000BB8  1               genstat:
+000BB8  1  A2 00            ldx #0
+000BBA  1  A5 28            lda SR
+000BBC  1  A8               tay
+000BBD  1               loop3:
+000BBD  1  3D 10 08         and andmasks,x
+000BC0  1  F0 08            beq clear
+000BC2  1  BD 18 08         lda status,x
+000BC5  1  9D 11 04         sta $0411,x
+000BC8  1  80 05            bra merga
+000BCA  1               clear:
+000BCA  1  A9 2D            lda #'-'
+000BCC  1  9D 11 04         sta $0411,x
+000BCF  1               merga:
+000BCF  1  E0 07            cpx #$7
+000BD1  1  F0 04            beq outtextp2
+000BD3  1  E8               inx
+000BD4  1  98               tya
+000BD5  1  80 E6            bra loop3
+000BD7  1               outtextp2:
+000BD7  1  E8               inx
+000BD8  1  9E 11 04         stz $0411,x
+000BDB  1               outtextp:
+000BDB  1  A2 00            ldx #$0
+000BDD  1               ;   jmp outtext
+000BDD  1               outtext:        ;outputs text data at $0400+x
+000BDD  1  BD 00 04         lda $0400,x
+000BE0  1  F0 C9            beq start2
+000BE2  1  20 D2 FF         jsr CHROUT
+000BE5  1  E8               inx
+000BE6  1  80 F5            bra outtext
+000BE8  1               de:
+000BE8  1  C9 43            cmp #'c'
+000BEA  1  F0 19            beq deca
+000BEC  1  C9 59            cmp #'y'
+000BEE  1  F0 26            beq decy
+000BF0  1  C9 58            cmp #'x'
+000BF2  1  D0 B4            bne err4
+000BF4  1  A5 28 48 28      lds
+000BF8  1  A6 26            ldx XR
+000BFA  1  CA               dex
+000BFB  1  86 26            stx XR
+000BFD  1  08 68 85 28      sts
+000C01  1  D8           
+000C02  1  4C 53 0B         jmp gentext
+000C05  1               deca:
+000C05  1  A5 28 48 28      lds
+000C09  1  A5 25            lda AR
+000C0B  1  3A               dec
+000C0C  1  85 25            sta AR
+000C0E  1  08 68 85 28      sts
+000C12  1  D8           
+000C13  1  4C 53 0B         jmp gentext
+000C16  1               decy:
+000C16  1  A5 28 48 28      lds
+000C1A  1  A4 27            ldy YR
+000C1C  1  88               dey
+000C1D  1  84 27            sty YR
+000C1F  1  08 68 85 28      sts
+000C23  1  D8           
+000C24  1  4C 53 0B         jmp gentext
+000C24  1               
