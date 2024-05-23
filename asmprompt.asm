@@ -6,7 +6,7 @@
 
    jmp first
 
-; zero page variables
+;zero page variables
 ZP = $30
 OT = $22
 AR = $25
@@ -14,7 +14,7 @@ XR = $26
 YR = $27
 SR = $28
 
-; character variables
+;character variables
 backspace = $14
 escape = $1B
 
@@ -33,6 +33,12 @@ CHROUT = $FFD2
     pla 
     sta SR
 .endmacro 
+
+andmasks:
+.byte $80,$40,$20,$10,$08,$04,$02,$01 
+
+status:
+.asciiz "nv--dizc"
 
 first:
     lda #1
@@ -75,7 +81,7 @@ next:
     bra input           ;check for more characters
 incy:                   ;some functions are here because 65(c)02 is able to branch backwards 
     cmp #'y'            
-    bne err3            ;see later code comments to figure out how this code works it's simular
+    bne err3            ;see later code comments to figure out how this code works it's simular to that
     lds 
     ldy YR
     iny 
@@ -209,13 +215,13 @@ check:              ;what has been stored in memory?
     cpx #'q'
     bne err2        ;invalid symbol, give an error
     rts             ;q has been written, quit the program
-tog_out:
-    lda OT
-    eor #1
+tog_out:            ;toggle output of the registers
+    lda OT          
+    eor #1          ;changes 1 to 0 and 0 to 1
     sta OT
     clc 
-    adc #$30
-    jsr CHROUT
+    adc #$30        ;makes ASCII '1' or '0'
+    jsr CHROUT      ;prints out the new status
     jmp start
 c:                  ;c is the first letter, check if "clc" instruction has been written
     cpy #'l'
@@ -225,7 +231,7 @@ c:                  ;c is the first letter, check if "clc" instruction has been 
     lda SR          ;load the status register
     and #%11111110  ;and mask to clear the carry flag (last bit) and leave other flags unchanged
     sta SR          ;store the modified status register
-    jmp gentext       ;go back to input
+    jmp gentext     ;go to print out register values
 r:
     cpy #'o'        ;r is the first letter, check for "ror" and "rol" instructions
     bne err2        ;only implied address mode implemented rn
@@ -236,7 +242,7 @@ r:
     ror             ;rotate A register right
     sta AR          ;store A register for other instructions
     sts             ;store the status register (also a macro) 
-    jmp gentext       ;go back for input
+    jmp gentext     ;go to print out register values
 l:
     cpy #'d'        ;l is the first letter, check for "lda", "ldx", "ldy" and "lsr" instructions
     bne ls          ;branch when is "lsr" or invalid
@@ -285,7 +291,7 @@ se:
     lda $28         ;load status register
     ora #$1         ;set last bit to 1 or leave last bit at 1, bits in this register are mapped like NV--DIZC
     sta $28         ;store status register
-    jmp gentext       ;return for next input
+    jmp gentext     ;go to print out register values
 rotl:               ;implied mode only for now
     cmp #'l'        
     bne err2        ;not branch when its "rol"
@@ -294,7 +300,7 @@ rotl:               ;implied mode only for now
     rol             ;rotate left
     sta AR          ;store A register
     sts             ;store potentially modified status register
-    jmp gentext       ;return for next input
+    jmp gentext     ;go to print out register values
 loadx:
     cmp #'x'        
     bne loady       ;not branch when its "ldx"
@@ -315,7 +321,7 @@ ls:
     lsr             ;bit shift to the left
     sta AR          ;store A register
     sts             ;store potentially changed status register
-    jmp gentext       ;jump to assembler
+    jmp gentext     ;go to print out register values
 story:
     ldx #$8C        ;load absolute opcode and magic number
     ldy #0
@@ -483,6 +489,8 @@ ret4:
     adc #$5
     tax 
     lda $2A,y
+    cmp #'p'
+    beq genstat
     iny 
     bra loop2
 hex3:
@@ -493,6 +501,28 @@ hex4:
     clc 
     adc #$37
     bra ret4
+genstat:
+    ldx #0
+    lda SR
+    tay 
+loop3:
+    and andmasks,x
+    beq clear
+    lda status,x 
+    sta $0411,x
+    bra merga
+clear:
+    lda #'-'
+    sta $0411,x
+merga:
+    cpx #$7
+    beq outtextp2
+    inx
+    tya
+    bra loop3
+outtextp2:
+    ldx #$11
+    bra outtext
 outtextp:
     ldx #$0
 ;   jmp outtext
