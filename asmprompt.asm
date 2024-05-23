@@ -4,11 +4,11 @@
 .segment "ONCE"
 .segment "CODE"
 
-   jmp start
+   jmp first
 
 ; zero page variables
 ZP = $30
-LD = $22
+OT = $22
 AR = $25
 XR = $26
 YR = $27
@@ -34,6 +34,20 @@ CHROUT = $FFD2
     sta SR
 .endmacro 
 
+first:
+    lda #1
+    sta OT
+    lda #'x'
+    sta $2A
+    lda #'y'
+    sta $2B
+    lda #'p'
+    sta $2C
+    stz ZP
+    stz AR
+    stz XR
+    stz YR
+    stz SR
 start:
     stz $23             ;zero out the value for setting the nibble skip
     stz $24             ;zero out the value for nibble skip
@@ -59,7 +73,7 @@ next:
     sta ZP,x            ;store the character          
     inx                 ;increment the index
     bra input           ;check for more characters
-incy:                   ;some functions are here because 65c02 is able to branch backwards 
+incy:                   ;some functions are here because 65(c)02 is able to branch backwards 
     cmp #'y'            
     bne err3            ;see later code comments to figure out how this code works it's simular
     lds 
@@ -67,16 +81,7 @@ incy:                   ;some functions are here because 65c02 is able to branch
     iny 
     sty YR
     sts 
-    jmp start 
-inca:
-    cmp #'c'
-    bne incy 
-    lds 
-    lda AR
-    inc 
-    sta AR
-    sts 
-    jmp start
+    jmp gentext 
 as:
     cmp #'l'
     bne err3
@@ -85,44 +90,48 @@ as:
     asl 
     sta AR
     sts
-    jmp start
+    jmp gentext
+inca:
+    cmp #'c'
+    bne incy 
+    lds 
+    lda AR
+    inc 
+    sta AR
+    sts 
+    jmp gentext
 ty:
     cmp #'a'
     bne err3
     lda YR
     sta AR
-    jmp start
-ta:
-    cmp #'x'
-    bne taty
-    lda AR
-    sta XR
-    jmp start
-err3:
-    jmp err         ;jump to error handler
+    jmp gentext
 tx:
     cmp #'a'
     bne err3
     lda XR
     sta AR
-    jmp start 
+    jmp gentext 
+err3:
+    jmp err         ;jump to error handler
 taty:
     cmp #'y'
     bne err3
     lda AR
     sta YR
-    jmp start
-i:
-    cpy #'n'
-    bne err3
+    jmp gentext
+ta:
     cmp #'x'
-    bne inca
-    lds 
-    ldx XR
-    inx 
-    stx XR
-    sts 
-    jmp start
+    bne taty
+    lda AR
+    sta XR
+    jmp gentext
+ad:
+    cmp #'c'
+    bne err3
+    ldx #$6d
+    ldy #$69
+    jmp load
 an:
     cpy #'d'
     beq ad
@@ -135,12 +144,17 @@ an:
     ldx #$2D
     ldy #$29
     jmp load
-ad:
-    cmp #'c'
+i:
+    cpy #'n'
     bne err3
-    ldx #$6d
-    ldy #$69
-    jmp load
+    cmp #'x'
+    bne inca
+    lds 
+    ldx XR
+    inx 
+    stx XR
+    sts 
+    jmp gentext
 t:
     cpy #'a'
     beq ta
@@ -170,6 +184,8 @@ check:              ;what has been stored in memory?
     ldx ZP
     ldy ZP+1        ;load three first symbols into registers (1-x, 2-y, 3-a)
     lda ZP+2        ;every implimented instruction consists of three letters
+    cpx #'m'
+    beq tog_out
     cpx #'o'        ;check for first letter
     beq o
     cpx #'e'
@@ -193,6 +209,14 @@ check:              ;what has been stored in memory?
     cpx #'q'
     bne err2        ;invalid symbol, give an error
     rts             ;q has been written, quit the program
+tog_out:
+    lda OT
+    eor #1
+    sta OT
+    clc 
+    adc #$30
+    jsr CHROUT
+    jmp start
 c:                  ;c is the first letter, check if "clc" instruction has been written
     cpy #'l'
     bne err2        ;error out
@@ -201,7 +225,7 @@ c:                  ;c is the first letter, check if "clc" instruction has been 
     lda SR          ;load the status register
     and #%11111110  ;and mask to clear the carry flag (last bit) and leave other flags unchanged
     sta SR          ;store the modified status register
-    jmp start       ;go back to input
+    jmp gentext       ;go back to input
 r:
     cpy #'o'        ;r is the first letter, check for "ror" and "rol" instructions
     bne err2        ;only implied address mode implemented rn
@@ -212,7 +236,7 @@ r:
     ror             ;rotate A register right
     sta AR          ;store A register for other instructions
     sts             ;store the status register (also a macro) 
-    jmp start       ;go back for input
+    jmp gentext       ;go back for input
 l:
     cpy #'d'        ;l is the first letter, check for "lda", "ldx", "ldy" and "lsr" instructions
     bne ls          ;branch when is "lsr" or invalid
@@ -261,7 +285,7 @@ se:
     lda $28         ;load status register
     ora #$1         ;set last bit to 1 or leave last bit at 1, bits in this register are mapped like NV--DIZC
     sta $28         ;store status register
-    jmp start       ;return for next input
+    jmp gentext       ;return for next input
 rotl:               ;implied mode only for now
     cmp #'l'        
     bne err2        ;not branch when its "rol"
@@ -270,7 +294,7 @@ rotl:               ;implied mode only for now
     rol             ;rotate left
     sta AR          ;store A register
     sts             ;store potentially modified status register
-    jmp start       ;return for next input
+    jmp gentext       ;return for next input
 loadx:
     cmp #'x'        
     bne loady       ;not branch when its "ldx"
@@ -291,7 +315,7 @@ ls:
     lsr             ;bit shift to the left
     sta AR          ;store A register
     sts             ;store potentially changed status register
-    jmp start       ;jump to assembler
+    jmp gentext       ;jump to assembler
 story:
     ldx #$8C        ;load absolute opcode and magic number
     ldy #0
@@ -375,7 +399,7 @@ err:                ;error handler
     jsr CHROUT
     lda #'e'
     jsr CHROUT      ;output enter and 'e'
-    jmp start       ;return to the start
+    jmp start       ;jump to gentext
 dek2:
     sec 
     sbc #$30    
@@ -405,7 +429,7 @@ ret:
     stx XR
     sty YR          
     sts             ;store the registers
-    jmp start       ;jump to the start
+    jmp gentext     ;jump to the text generator
 hex:                ;hex decoder
     cmp #$41        
     bmi err         ;branch if input is less than PETSCII "A"
@@ -418,3 +442,65 @@ alt:
     lda #$60
     sta ZP+3        ;store "rts" opcode to 4th byte of the code
     bra ret         ;go back to the main program
+gentext:
+    lda OT
+    beq start2
+    lda #$0D
+    jsr CHROUT
+    lda #'a'
+    ldx #0
+    ldy #0
+loop2:
+    sta $0400,x
+    lda #'='
+    sta $0401,x
+    lda AR,y
+    lsr 
+    lsr 
+    lsr 
+    lsr 
+    cmp #$0A
+    bpl hex3
+    clc 
+    adc #$30
+ret3:
+    sta $0402,x
+    lda AR,y
+    and #$0F
+    cmp #$0A
+    bpl hex4
+    clc 
+    adc #$30
+ret4:
+    sta $0403,x
+    lda #$20
+    sta $0404,x
+    stz $0405,x
+    cpy #3
+    beq outtextp
+    txa 
+    clc 
+    adc #$5
+    tax 
+    lda $2A,y
+    iny 
+    bra loop2
+hex3:
+    clc 
+    adc #$37
+    bra ret3
+hex4:
+    clc 
+    adc #$37
+    bra ret4
+outtextp:
+    ldx #$0
+;   jmp outtext
+outtext:        ;outputs text data at $0400+x
+    lda $0400,x 
+    beq start2
+    jsr CHROUT 
+    inx 
+    bra outtext
+start2:
+    jmp start
