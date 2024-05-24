@@ -1,6 +1,6 @@
 ca65 V2.19 - Git d7d1d8969
-Main file   : asmprompt_test.asm
-Current file: asmprompt_test.asm
+Main file   : asmprompt.asm
+Current file: asmprompt.asm
 
 000000r 1               .org $080D
 00080D  1               .segment "STARTUP"
@@ -240,7 +240,7 @@ Current file: asmprompt_test.asm
 000988  1               d:
 000988  1  C0 45            cpy #'e'
 00098A  1  D0 4B            bne err2
-00098C  1  4C E8 0B         jmp de
+00098C  1  4C E7 0B         jmp de
 00098F  1               c:                  ;c is the first letter, check if "clc" instruction has been written
 00098F  1  C0 4C            cpy #'l'
 000991  1  D0 44            bne err2        ;error out
@@ -522,7 +522,7 @@ Current file: asmprompt_test.asm
 000B93  1  9D 04 04         sta $0404,x
 000B96  1  9E 05 04         stz $0405,x
 000B99  1  C0 03            cpy #3
-000B9B  1  F0 3E            beq outtextp
+000B9B  1  F0 3D            beq outtextp
 000B9D  1  8A               txa
 000B9E  1  18               clc
 000B9F  1  69 05            adc #$5
@@ -562,45 +562,44 @@ Current file: asmprompt_test.asm
 000BD4  1  98               tya
 000BD5  1  80 E6            bra loop3
 000BD7  1               outtextp2:
-000BD7  1  E8               inx
-000BD8  1  9E 11 04         stz $0411,x
-000BDB  1               outtextp:
-000BDB  1  A2 00            ldx #$0
-000BDD  1               ;   jmp outtext
-000BDD  1               outtext:        ;outputs text data at $0400+x
-000BDD  1  BD 00 04         lda $0400,x
-000BE0  1  F0 C9            beq start2
-000BE2  1  20 D2 FF         jsr CHROUT
-000BE5  1  E8               inx
-000BE6  1  80 F5            bra outtext
-000BE8  1               de:
-000BE8  1  C9 43            cmp #'c'
-000BEA  1  F0 19            beq deca
-000BEC  1  C9 59            cmp #'y'
-000BEE  1  F0 26            beq decy
-000BF0  1  C9 58            cmp #'x'
-000BF2  1  D0 B4            bne err4
-000BF4  1  A5 28 48 28      lds
-000BF8  1  A6 26            ldx XR
-000BFA  1  CA               dex
-000BFB  1  86 26            stx XR
-000BFD  1  08 68 85 28      sts
-000C01  1  D8           
-000C02  1  4C 53 0B         jmp gentext
-000C05  1               deca:
-000C05  1  A5 28 48 28      lds
-000C09  1  A5 25            lda AR
-000C0B  1  3A               dec
-000C0C  1  85 25            sta AR
-000C0E  1  08 68 85 28      sts
-000C12  1  D8           
-000C13  1  4C 53 0B         jmp gentext
-000C16  1               decy:
-000C16  1  A5 28 48 28      lds
-000C1A  1  A4 27            ldy YR
-000C1C  1  88               dey
-000C1D  1  84 27            sty YR
-000C1F  1  08 68 85 28      sts
-000C23  1  D8           
-000C24  1  4C 53 0B         jmp gentext
-000C24  1               
+000BD7  1  9E 12 04         stz $0412,x
+000BDA  1               outtextp:
+000BDA  1  A2 00            ldx #$0
+000BDC  1               ;   jmp outtext
+000BDC  1               outtext:        ;outputs text data at $0400+x
+000BDC  1  BD 00 04         lda $0400,x
+000BDF  1  F0 CA            beq start2
+000BE1  1  20 D2 FF         jsr CHROUT
+000BE4  1  E8               inx
+000BE5  1  80 F5            bra outtext
+000BE7  1               de:
+000BE7  1  C9 43            cmp #'c'
+000BE9  1  F0 19            beq deca
+000BEB  1  C9 59            cmp #'y'
+000BED  1  F0 26            beq decy
+000BEF  1  C9 58            cmp #'x'
+000BF1  1  D0 B5            bne err4
+000BF3  1  A5 28 48 28      lds
+000BF7  1  A6 26            ldx XR
+000BF9  1  CA               dex
+000BFA  1  86 26            stx XR
+000BFC  1  08 68 85 28      sts
+000C00  1  D8           
+000C01  1  4C 53 0B         jmp gentext
+000C04  1               deca:
+000C04  1  A5 28 48 28      lds
+000C08  1  A5 25            lda AR
+000C0A  1  3A               dec
+000C0B  1  85 25            sta AR
+000C0D  1  08 68 85 28      sts
+000C11  1  D8           
+000C12  1  4C 53 0B         jmp gentext
+000C15  1               decy:
+000C15  1  A5 28 48 28      lds
+000C19  1  A4 27            ldy YR
+000C1B  1  88               dey
+000C1C  1  84 27            sty YR
+000C1E  1  08 68 85 28      sts
+000C22  1  D8           
+000C23  1  4C 53 0B         jmp gentext
+000C23  1               
