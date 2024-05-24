@@ -547,8 +547,7 @@ merga:
     tya
     bra loop3
 outtextp2:
-    inx 
-    stz $0411,x
+    stz $0412,x
 outtextp:
     ldx #$0
 ;   jmp outtext
